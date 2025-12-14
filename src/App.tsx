@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, Paper } from '@mui/material';
+import { Box, Button, Typography, Paper, Grid } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
-import CasinoIcon from '@mui/icons-material/Casino'; // Ícone do dado
+import CasinoIcon from '@mui/icons-material/Casino';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 enum Linha {
   VERTICAL,
   HORIZONTAL
 }
 
-// Configurações do Grid
-const BOARD_SIZE = 8; 
-const DOT_SIZE = 12; 
+const DOT_SIZE = 12;
 const LINE_THICKNESS = 6;
 const CELL_SIZE = 40;
 
@@ -22,46 +22,62 @@ interface GameState {
   squares: PlayerType[][];
   currentPlayer: 'A' | 'B';
   scores: { A: number; B: number };
-  // Novos estados para o dado
-  movesLeft: number;      // Quantas linhas o jogador ainda pode colocar
-  diceValue: number | null; // Valor que saiu no dado
-  waitingForRoll: boolean;  // Se o jogador precisa rolar o dado antes de jogar
+  movesLeft: number;
+  diceValue: number | null;
+  waitingForRoll: boolean;
 }
 
 const App = () => {
-  const initializeGame = (): GameState => ({
-    horizontalLines: Array(BOARD_SIZE + 1).fill(null).map(() => Array(BOARD_SIZE).fill(false)),
-    verticalLines: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE + 1).fill(false)),
-    squares: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null)),
+
+  const [boardSize, setBoardSize] = useState<number | null>(null);
+  
+  const [game, setGame] = useState<GameState | null>(null);
+
+  const initializeGame = (size: number): GameState => ({
+    horizontalLines: Array(size + 1).fill(null).map(() => Array(size).fill(false)),
+    verticalLines: Array(size).fill(null).map(() => Array(size + 1).fill(false)),
+    squares: Array(size).fill(null).map(() => Array(size).fill(null)),
     currentPlayer: 'A',
     scores: { A: 0, B: 0 },
     movesLeft: 0,
     diceValue: null,
-    waitingForRoll: true, // Começa esperando o Player A rolar
+    waitingForRoll: true,
   });
 
-  const [game, setGame] = useState<GameState>(initializeGame());
+  const handleStartGame = (size: number) => {
+    setBoardSize(size);
+    setGame(initializeGame(size));
+  };
 
-  // Função para sortear o número
+  const handleResetGame = () => {
+    if (boardSize) {
+      setGame(initializeGame(boardSize));
+    }
+  };
+
+  const handleBackToMenu = () => {
+    setBoardSize(null);
+    setGame(null);
+  };
+
   const handleRollDice = () => {
-    const rolledNumber = Math.floor(Math.random() * 6) + 1; // 1 a 6
-    setGame(prev => ({
+    if (!game) return;
+    const rolledNumber = Math.floor(Math.random() * 6) + 1;
+    setGame(prev => prev ? ({
       ...prev,
       diceValue: rolledNumber,
       movesLeft: rolledNumber,
       waitingForRoll: false
-    }));
+    }) : null);
   };
 
   const handleLineClick = (type: Linha, row: number, column: number) => {
-    const isGameOver = game.scores.A + game.scores.B === BOARD_SIZE * BOARD_SIZE;
+    if (!game || !boardSize) return;
+
+    const isGameOver = game.scores.A + game.scores.B === boardSize * boardSize;
 
     if (isGameOver) return;
-
-    // Bloqueia se o jogador ainda não rolou o dado
     if (game.waitingForRoll) return;
-
-    // Bloqueia se não houver movimentos (embora a UI deva prevenir isso)
     if (game.movesLeft <= 0) return;
 
     if (type === Linha.HORIZONTAL && game.horizontalLines[row][column]) return;
@@ -75,17 +91,14 @@ const App = () => {
     newGame.squares = game.squares.map(row => [...row]);
     newGame.scores = { ...game.scores };
 
-    // Preenche a linha
     if (type === Linha.HORIZONTAL){ 
       newGame.horizontalLines[row][column] = true;
     } else {
       newGame.verticalLines[row][column] = true;
     }
 
-    // Decrementa os movimentos restantes
     newGame.movesLeft = game.movesLeft - 1;
 
-    // Verifica quadrados
     let squareClosed = false;
     const checkSquare = (rowCS: number, columnCS: number) => {
       if (
@@ -103,27 +116,21 @@ const App = () => {
     };
 
     if (type === Linha.HORIZONTAL) {
-      if (row < BOARD_SIZE) checkSquare(row, column);
+      if (row < boardSize) checkSquare(row, column);
       if (row > 0) checkSquare(row - 1, column);
     } else {
-      if (column < BOARD_SIZE) checkSquare(row, column);
+      if (column < boardSize) checkSquare(row, column);
       if (column > 0) checkSquare(row, column - 1);
     }
 
-    // LÓGICA DE FIM DE TURNO ALTERADA:
-    // O turno só acaba quando os movimentos do dado chegam a 0.
-    // Fechar quadrado dá ponto, mas não reseta o dado nem impede a contagem.
     if (newGame.movesLeft === 0) {
-      // Passa a vez
       newGame.currentPlayer = game.currentPlayer === 'A' ? 'B' : 'A';
-      // Prepara para o próximo jogador rolar
       newGame.waitingForRoll = true;
       newGame.diceValue = null; 
     }
 
-    // Verifica se o jogo acabou após o movimento (para não deixar movimentos sobrando num jogo finalizado)
     const totalScore = newGame.scores.A + newGame.scores.B;
-    if (totalScore === BOARD_SIZE * BOARD_SIZE) {
+    if (totalScore === boardSize * boardSize) {
         newGame.movesLeft = 0;
         newGame.waitingForRoll = false;
     }
@@ -131,9 +138,43 @@ const App = () => {
     setGame(newGame);
   };
 
-  const isGameOver = game.scores.A + game.scores.B === BOARD_SIZE * BOARD_SIZE;
+  // --- TELA DE MENU (SELEÇÃO DE TAMANHO) ---
+  if (!game || !boardSize) {
+    return (
+      <Box sx={{ 
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
+        height: '100vh', bgcolor: '#f5f5f5', gap: 4, p: 2 
+      }}>
+        <Paper elevation={4} sx={{ p: 5, borderRadius: 3, textAlign: 'center', maxWidth: 500 }}>
+          <GridOnIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            Jogo dos Pontinhos
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Escolha o tamanho do tabuleiro para começar:
+          </Typography>
+          
+          <Grid container spacing={2} justifyContent="center">
+            {[3, 5, 7, 9].map((size) => (
+              <Grid key={size}>
+                <Button 
+                  variant="contained" 
+                  size="large"
+                  onClick={() => handleStartGame(size)}
+                  sx={{ width: 100, height: 60, fontSize: '1.2rem', borderRadius: 2 }}
+                >
+                  {size}x{size}
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      </Box>
+    );
+  }
 
-  // define a cor de hover baseada no jogador atual
+  // --- TELA DO JOGO ---
+  const isGameOver = game.scores.A + game.scores.B === boardSize * boardSize;
   const currentHoverColor = game.currentPlayer === 'A' ? 'primary.main' : 'secondary.main';
 
   return (
@@ -149,7 +190,6 @@ const App = () => {
             <Typography variant="h4">{game.scores.A}</Typography>
           </Box>
           
-          {/* Área Central: Status do Dado */}
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             {!isGameOver && (
                <>
@@ -160,7 +200,7 @@ const App = () => {
                      startIcon={<CasinoIcon />}
                      onClick={handleRollDice}
                    >
-                     Rolar Dado
+                     Rolar
                    </Button>
                  ) : (
                    <Box sx={{ textAlign: 'center' }}>
@@ -197,24 +237,20 @@ const App = () => {
           bgcolor: 'white', 
           borderRadius: 4, 
           boxShadow: 3,
-          // Desabilita visualmente o tabuleiro se estiver esperando rolar o dado
           opacity: game.waitingForRoll && !isGameOver ? 0.6 : 1,
           pointerEvents: game.waitingForRoll && !isGameOver ? 'none' : 'auto',
           transition: 'opacity 0.3s'
         }}>
         
-        {Array.from({ length: BOARD_SIZE + 1 }).map((_, row) => (
+        {Array.from({ length: boardSize + 1 }).map((_, row) => (
           <Box key={`r-${row}`} sx={{ display: 'flex', flexDirection: 'column' }}>
             
             {/* Linha de Pontos e Linhas Horizontais */}
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {Array.from({ length: BOARD_SIZE + 1 }).map((_, column) => (
+              {Array.from({ length: boardSize + 1 }).map((_, column) => (
                 <React.Fragment key={`dot-h-${row}-${column}`}>
-                  {/* Ponto */}
                   <Box sx={{ width: DOT_SIZE, height: DOT_SIZE, borderRadius: '50%', bgcolor: '#333', zIndex: 2 }} />
-
-                  {/* Linha Horizontal */}
-                  {column < BOARD_SIZE && (
+                  {column < boardSize && (
                     <Box 
                       onClick={() => handleLineClick(Linha.HORIZONTAL, row, column)}
                       sx={{
@@ -236,12 +272,10 @@ const App = () => {
             </Box>
 
             {/* Linhas Verticais e Quadrados */}
-            {row < BOARD_SIZE && (
+            {row < boardSize && (
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                {Array.from({ length: BOARD_SIZE + 1 }).map((_, column) => (
+                {Array.from({ length: boardSize + 1 }).map((_, column) => (
                   <React.Fragment key={`v-sq-${row}-${column}`}>
-                    
-                    {/* Linha Vertical */}
                     <Box 
                        onClick={() => handleLineClick(Linha.VERTICAL, row, column)}
                        sx={{
@@ -260,8 +294,7 @@ const App = () => {
                        }}
                     />
 
-                    {/* Quadrado */}
-                    {column < BOARD_SIZE && (
+                    {column < boardSize && (
                       <Box sx={{
                         width: CELL_SIZE,
                         height: CELL_SIZE,
@@ -290,15 +323,25 @@ const App = () => {
         ))}
       </Box>
 
-      <Button 
-        variant="outlined" 
-        color="inherit"
-        startIcon={<ReplayIcon />} 
-        onClick={() => setGame(initializeGame())}
-        sx={{ mt: 2 }}
-      >
-        Reiniciar Jogo
-      </Button>
+      {/* Botões de Ação do Jogo */}
+      <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+        <Button 
+          variant="outlined" 
+          color="inherit"
+          startIcon={<ReplayIcon />} 
+          onClick={handleResetGame}
+        >
+          Reiniciar Tabuleiro
+        </Button>
+        <Button 
+          variant="text" 
+          color="inherit"
+          startIcon={<ArrowBackIcon />} 
+          onClick={handleBackToMenu}
+        >
+          Mudar Tamanho
+        </Button>
+      </Box>
     </Box>
   );
 };
