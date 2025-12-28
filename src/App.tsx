@@ -67,9 +67,9 @@ const App = () => {
   };
 
   const handleRollDice = () => {
-    if (!game) return;
+    if (!game || !boardSize) return;
 
-    const rolledNumber = Math.floor(Math.random() * 6) + 1;
+    const rolledNumber = Math.floor(Math.random() * boardSize) + 1;
 
     setGame(prev => prev ? ({
       ...prev,
