@@ -50,7 +50,10 @@ const App = () => {
   // --- EFEITO: CONEXÃO COM SOCKET ---
   useEffect(() => {
     // Conecta ao backend (ajuste a URL se necessário)
-    const newSocket = io(SOCKET_URL);
+    const newSocket = io(SOCKET_URL, {
+      transports: ['websocket'],
+    });
+    setSocket(newSocket);
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
