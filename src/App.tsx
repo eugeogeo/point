@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Button, Typography, Paper, Grid } from '@mui/material';
+import { Box, Button, Typography, Paper, Grid, TextField } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CasinoIcon from '@mui/icons-material/Casino';
 import GridOnIcon from '@mui/icons-material/GridOn';
@@ -30,6 +30,7 @@ interface GameState {
 const App = () => {
 
   const [boardSize, setBoardSize] = useState<number | null>(null);
+  const [playerNames, setPlayerNames] = useState({ A: 'Jogador A', B: 'Jogador B' });
   
   const [game, setGame] = useState<GameState | null>(null);
 
@@ -45,6 +46,11 @@ const App = () => {
   });
 
   const handleStartGame = (size: number) => {
+    // Garante que se o nome estiver vazio, volta para o padrão
+    setPlayerNames(prev => ({
+      A: prev.A.trim() || 'Jogador A',
+      B: prev.B.trim() || 'Jogador B'
+    }));
     setBoardSize(size);
     setGame(initializeGame(size));
   };
@@ -62,7 +68,9 @@ const App = () => {
 
   const handleRollDice = () => {
     if (!game) return;
+
     const rolledNumber = Math.floor(Math.random() * 6) + 1;
+
     setGame(prev => prev ? ({
       ...prev,
       diceValue: rolledNumber,
@@ -138,19 +146,34 @@ const App = () => {
     setGame(newGame);
   };
 
-  // --- TELA DE MENU (SELEÇÃO DE TAMANHO) ---
+  // --- TELA DE MENU (SELEÇÃO DE TAMANHO E NOMES) ---
   if (!game || !boardSize) {
     return (
-      <Box sx={{ 
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', 
-        height: '100vh', bgcolor: '#f5f5f5', gap: 4, p: 2 
-      }}>
-        <Paper elevation={4} sx={{ p: 5, borderRadius: 3, textAlign: 'center', maxWidth: 500 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', bgcolor: '#f5f5f5', gap: 4, p: 2 }}>
+        <Paper elevation={4} sx={{ p: 5, borderRadius: 3, textAlign: 'center', maxWidth: 500, width: '100%' }}>
           <GridOnIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
           <Typography variant="h4" fontWeight="bold" gutterBottom>
             Jogo dos Pontinhos
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          
+          <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', gap: 2 }}>
+             <TextField 
+                label="Nome do Jogador 1" 
+                variant="outlined" 
+                fullWidth
+                value={playerNames.A}
+                onChange={(e) => setPlayerNames(prev => ({ ...prev, A: e.target.value }))}
+             />
+             <TextField 
+                label="Nome do Jogador 2" 
+                variant="outlined" 
+                fullWidth
+                value={playerNames.B}
+                onChange={(e) => setPlayerNames(prev => ({ ...prev, B: e.target.value }))}
+             />
+          </Box>
+
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
             Escolha o tamanho do tabuleiro para começar:
           </Typography>
           
@@ -181,16 +204,25 @@ const App = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, p: 4, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
       
       {/* Placar e Controles */}
-      <Paper elevation={3} sx={{ p: 2, borderRadius: 2, width: '100%', maxWidth: 450 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ opacity: game.currentPlayer === 'A' ? 1 : 0.5 }}>
-            <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
-              Jogador A
+      <Paper elevation={3} sx={{ p: 2, borderRadius: 2, width: '100%', maxWidth: 600 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          
+          {/* Jogador A */}
+          <Box sx={{ 
+            opacity: game.currentPlayer === 'A' ? 1 : 0.5, 
+            textAlign: 'center',
+            borderBottom: game.currentPlayer === 'A' ? '3px solid #1976d2' : '3px solid transparent',
+            pb: 1,
+            minWidth: 100
+          }}>
+            <Typography variant="subtitle1" color="primary.main" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+              {playerNames.A}
             </Typography>
             <Typography variant="h4">{game.scores.A}</Typography>
           </Box>
           
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Centro / Dado */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 2 }}>
             {!isGameOver && (
                <>
                  {game.waitingForRoll ? (
@@ -215,9 +247,16 @@ const App = () => {
             )}
           </Box>
 
-          <Box sx={{ opacity: game.currentPlayer === 'B' ? 1 : 0.5, textAlign: 'right' }}>
-            <Typography variant="h6" color="secondary.main" sx={{ fontWeight: 'bold' }}>
-              Jogador B
+          {/* Jogador B */}
+          <Box sx={{ 
+            opacity: game.currentPlayer === 'B' ? 1 : 0.5, 
+            textAlign: 'center',
+            borderBottom: game.currentPlayer === 'B' ? '3px solid #9c27b0' : '3px solid transparent',
+            pb: 1,
+            minWidth: 100
+          }}>
+            <Typography variant="subtitle1" color="secondary.main" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+              {playerNames.B}
             </Typography>
             <Typography variant="h4">{game.scores.B}</Typography>
           </Box>
@@ -225,7 +264,7 @@ const App = () => {
 
         {isGameOver && (
           <Typography align="center" variant="h5" sx={{ mt: 1, fontWeight: 'bold', color: 'success.main' }}>
-            {game.scores.A > game.scores.B ? 'Jogador A Venceu!' : game.scores.B > game.scores.A ? 'Jogador B Venceu!' : 'Empate!'}
+            {game.scores.A > game.scores.B ? `${playerNames.A} Venceu!` : game.scores.B > game.scores.A ? `${playerNames.B} Venceu!` : 'Empate!'}
           </Typography>
         )}
       </Paper>
@@ -310,7 +349,8 @@ const App = () => {
                             fontWeight: 'bold',
                             userSelect: 'none'
                           }}>
-                            {game.squares[row][column]}
+                            {/* Mostra a inicial do nome escolhido */}
+                            {game.squares[row][column] === 'A' ? playerNames.A.charAt(0).toUpperCase() : playerNames.B.charAt(0).toUpperCase()}
                           </Typography>
                         )}
                       </Box>
