@@ -102,6 +102,14 @@ const App = () => {
       setStatusMessage(msg);
     });
 
+    newSocket.on('opponent_left', () => {
+      alert("O oponente desconectou! O jogo será encerrado.");
+      setGame(null);      // Reseta o estado do jogo
+      setBoardSize(null); // Volta para o lobby
+      setRoomId("");      // Limpa o ID da sala
+      setMyPlayerType(null);
+    });
+
     return () => {
       newSocket.disconnect();
     };
