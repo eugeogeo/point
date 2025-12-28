@@ -245,7 +245,6 @@ const App = () => {
       <Paper sx={{ p: 1, px: 3, borderRadius: 10, bgcolor: isMyTurn ? '#e3f2fd' : '#fff' }}>
          <Typography variant="subtitle2" color="text.secondary">
             {isMyTurn ? "Sua vez de jogar!" : `Aguardando ${game.currentPlayer === 'A' ? playerNames.A : playerNames.B}...`}
-            {myPlayerType}
          </Typography>
       </Paper>
 
